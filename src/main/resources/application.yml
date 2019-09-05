@@ -1,0 +1,12 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: fihws-spring-boot-starter
+
+
+logging:
+  config: classpath:logback-spring.xml
+  path: logs/
+
