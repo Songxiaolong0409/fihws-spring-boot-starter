@@ -34,8 +34,12 @@ public class WebSocketServer {
     @OnOpen
     public void onOpen(@PathParam("uid") String uid, Session session) {
         if(webSocketSender.hasOnline(uid)){
-            log.info("此用户已连接");
-            return;
+            log.info("此用户已连接，关闭原会话，再重建会话。。。");
+            /*
+                若已存在的用户重联，防止用户意外断开后的重联，所以先调用关闭连接的方法，关闭原连接。
+                再继续重联。
+             */
+            onClose(uid);
         }
 
         this.session = session;

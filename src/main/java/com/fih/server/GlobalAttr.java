@@ -20,7 +20,8 @@ public class GlobalAttr {
     }
 
     public static synchronized void subOnlineCount() {
-        GlobalAttr.onlineCount--;
+        if(GlobalAttr.getOnlineCount()>0)
+            GlobalAttr.onlineCount--;
     }
 
     //concurrent包的线程安全，用来存放每个客户端对应的WebSocketServer对象。
