@@ -61,9 +61,9 @@ public class WebSocketSender {
     public void send2User(String uid,String message){
         List<String> touids=get2uids(message);
         if(touids.size()>pageSize){
-            List<WebSocketServer> list=new ArrayList<>();
+            List<WebSocketListenerHandle> list=new ArrayList<>();
             touids.forEach(touid -> {
-                WebSocketServer webSocketServer=GlobalAttr.webSocketMap.get(touid);
+                WebSocketListenerHandle webSocketServer=GlobalAttr.webSocketMap.get(touid);
                 if(!ObjectUtils.isEmpty(webSocketServer))
                     list.add(webSocketServer);
 
@@ -83,7 +83,7 @@ public class WebSocketSender {
      */
     public void send2User(List<String> touids,String message){
         touids.forEach(touid -> {
-            WebSocketServer webSocketServer=GlobalAttr.webSocketMap.get(touid);
+            WebSocketListenerHandle webSocketServer=GlobalAttr.webSocketMap.get(touid);
             if(ObjectUtils.isEmpty(webSocketServer))
                 log.error("{}用户不在线，发送消息失败",touid);
             else{
@@ -122,7 +122,7 @@ public class WebSocketSender {
 
     public void sendAllThread(String uid,String message){
         //map转换为list，方便后续根据下标遍历取值
-        List<WebSocketServer> list=new ArrayList<>(GlobalAttr.webSocketMap.values());
+        List<WebSocketListenerHandle> list=new ArrayList<>(GlobalAttr.webSocketMap.values());
         List<String> touids=new ArrayList<>(GlobalAttr.webSocketMap.keySet());
         sendAllThread(list,touids,uid,message);
     }
@@ -135,7 +135,7 @@ public class WebSocketSender {
      * @param uid       发送人id
      * @param message   信息
      */
-    public void sendAllThread(List<WebSocketServer> list,List<String> touids,String uid,String message){
+    public void sendAllThread(List<WebSocketListenerHandle> list, List<String> touids, String uid, String message){
         //var totalPage = (total + pageSize - 1)/pageSize;
         int totalPage=(list.size()+pageSize-1)/pageSize;
 
@@ -168,11 +168,11 @@ public class WebSocketSender {
      * @return
      */
     public boolean hasOnline(String uid){
-        return !ObjectUtils.isEmpty(GlobalAttr.webSocketMap.get(uid));
+        return !ObjectUtils.isEmpty(GlobalAttr.userOnlineMap.get(uid));
     }
 
 
-    public void sendMessage(WebSocketServer webSocketServer,String message){
+    public void sendMessage(WebSocketListenerHandle webSocketServer, String message){
         try {
             if(hasAddressee(message))
                 message=message.split(msgSplit)[1];

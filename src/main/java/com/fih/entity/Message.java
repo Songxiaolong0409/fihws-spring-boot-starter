@@ -1,4 +1,4 @@
-package com.fih.server;
+package com.fih.entity;
 
 import lombok.Data;
 

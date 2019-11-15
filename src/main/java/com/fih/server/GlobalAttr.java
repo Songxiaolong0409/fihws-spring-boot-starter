@@ -1,33 +1,24 @@
 package com.fih.server;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * webSocket 全局属性
  */
 public class GlobalAttr {
 
-    //静态变量，用来记录当前在线连接数。
-    private static int onlineCount = 0;
-
-    public static synchronized int getOnlineCount() {
-        return onlineCount;
+    public static int getOnlineCount() {
+        return (int) userOnlineMap.mappingCount();
     }
 
-    public static synchronized void addOnlineCount() {
-        GlobalAttr.onlineCount++;
-    }
+    /**
+     *  在线的用户链接
+     */
+    public static ConcurrentHashMap<String, WebSocketListenerHandle> webSocketMap=new ConcurrentHashMap<>();
 
-    public static synchronized void subOnlineCount() {
-        if(GlobalAttr.getOnlineCount()>0)
-            GlobalAttr.onlineCount--;
-    }
-
-    //concurrent包的线程安全，用来存放每个客户端对应的WebSocketServer对象。
-    public static CopyOnWriteArraySet<WebSocketServer> webSocketSet = new CopyOnWriteArraySet<>();
-
-
-    public static ConcurrentHashMap<String,WebSocketServer> webSocketMap=new ConcurrentHashMap<>();
+    /**
+     * 在线的用户都会通过mq同步到所有服务应用。
+     */
+    public static ConcurrentHashMap<String, String> userOnlineMap=new ConcurrentHashMap<>();
 
 }

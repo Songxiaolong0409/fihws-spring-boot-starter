@@ -1,4 +1,7 @@
-# WebSocket springBoot 的单机版实现，后续会补充集群模式
+# WebSocket springBoot RibbitMq集群模式
+
+通过nginx做反向代理负载均衡，当接收到客户端发送的消息时，放入mq中。
+然后所有应用从mq中获取消息，发送给应用已注册的用户。
 
 ## 使用方式
 
@@ -7,7 +10,7 @@
     <dependency>
           <groupId>com.fih</groupId>
           <artifactId>fihws-spring-boot-starter</artifactId>
-          <version>1.0-SNAPSHOT</version>
+          <version>2.01.01.191115-SNAPSHOT</version>
     </dependency>
 
 ### 2. 配置日志（可选）
