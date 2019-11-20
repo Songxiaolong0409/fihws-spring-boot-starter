@@ -47,7 +47,12 @@ public class WebSocketListenerHandle {
     //与某个客户端的连接会话，需要通过它来给客户端发送数据
     private Session session;
 
+
     private HttpSession httpSession;
+
+    public Session getSession(){
+        return session;
+    }
 
     /**
      * 连接建立成功调用的方法
@@ -131,10 +136,9 @@ public class WebSocketListenerHandle {
      * @param message
      * @throws IOException
      */
-    public synchronized void sendMessage(String message) throws IOException {
+    public synchronized void sendMessage(String message) throws Exception {
         log.info("正在发送消息：{}",message);
-
-        this.session.getAsyncRemote().sendText(message);
+        this.session.getBasicRemote().sendText(message);
     }
 
 }

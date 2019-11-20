@@ -40,3 +40,34 @@
         [用户id],[用户id2] :@ [需要发送的信息]
         
     群发信息，直接发送信息即可。
+    
+## 6.nginx.config 配置
+
+	map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+    }
+	
+	upstream ws {
+		server 192.168.168.220:8083;
+		server 192.168.168.220:8084;
+	}
+	
+	server {
+		listen	9999;
+		server_name 192.168.166.103;
+		location / {
+			proxy_pass	http://ws;
+			proxy_read_timeout 300s;
+			proxy_set_header Host $host;
+			proxy_set_header X-Real-IP $remote_addr;
+			proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+			proxy_http_version 1.1;
+			proxy_set_header Upgrade $http_upgrade;
+			proxy_set_header Connection $connection_upgrade;
+		}
+	}
+   
+## 7. 启动jar
+
+    java -server -Xms2048m -Xmx2048m -Xmn512m -jar xxx.jar 

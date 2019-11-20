@@ -25,22 +25,27 @@ public class RabbitMsgListener {
      */
     @RabbitListener(queues=RabbitMQConfig.TOPIC_PUSH_CONN+".${push.config.queue}")
     public void addUser(RabbitPushMessage message) {
-        log.info("【{}】：{}",RabbitMQConfig.TOPIC_PUSH_CONN,JSONObject.toJSON(message));
+        try {
+            log.info("【{}】：{}",RabbitMQConfig.TOPIC_PUSH_CONN,JSONObject.toJSON(message));
 
-        if(!ObjectUtils.isEmpty(message)){
-            if(RabbitPushMessage.ADD.equals(message.getType())){
+            if(!ObjectUtils.isEmpty(message)){
+                if(RabbitPushMessage.ADD.equals(message.getType())){
 
-                GlobalAttr.userOnlineMap.put(message.getUid(),message.getUid());
-                log.info("{}加入，当前在线人数为 {}" , message.getUid(),GlobalAttr.getOnlineCount());
-            }else if(RabbitPushMessage.DEL.equals(message.getType())){
+                    GlobalAttr.userOnlineMap.put(message.getUid(),message.getUid());
+                    log.info("{}加入，当前在线人数为 {}" , message.getUid(),GlobalAttr.getOnlineCount());
+                }else if(RabbitPushMessage.DEL.equals(message.getType())){
 
-                GlobalAttr.userOnlineMap.remove(message.getUid());
-                if(!ObjectUtils.isEmpty(GlobalAttr.webSocketMap.get(message.getUid()))){
-                    GlobalAttr.webSocketMap.remove(message.getUid());
-                    log.info("{}断开连接，当前在线人数为 {}" , message.getUid(),GlobalAttr.getOnlineCount());
+                    GlobalAttr.userOnlineMap.remove(message.getUid());
+                    if(!ObjectUtils.isEmpty(GlobalAttr.webSocketMap.get(message.getUid()))){
+                        GlobalAttr.webSocketMap.remove(message.getUid());
+                        log.info("{}断开连接，当前在线人数为 {}" , message.getUid(),GlobalAttr.getOnlineCount());
+                    }
+
                 }
-
             }
+        }catch (Exception e){
+            e.printStackTrace();
+            log.error(e.getMessage());
         }
     }
 
@@ -50,9 +55,10 @@ public class RabbitMsgListener {
      */
     @RabbitListener(queues=RabbitMQConfig.TOPIC_PUSH_MSG+".${push.config.queue}")
     public void sendMsg(RabbitPushMessage message) {
-        log.info("【{}】：{}",RabbitMQConfig.TOPIC_PUSH_MSG,JSONObject.toJSON(message));
+        try {
+            log.info("【{}】：{}",RabbitMQConfig.TOPIC_PUSH_MSG,JSONObject.toJSON(message));
 
-        if(!ObjectUtils.isEmpty(message)){
+            if(!ObjectUtils.isEmpty(message)){
             /*WebSocketListenerHandle concurrentHashMap= GlobalAttr.webSocketMap.get(message.getUid());
             if(ObjectUtils.isEmpty(concurrentHashMap)){
                 log.error("MQ里有未读消息。。。");
@@ -61,19 +67,27 @@ public class RabbitMsgListener {
 
             WebSocketSender webSocketSender=GlobalAttr.webSocketMap.get(message.getUid()).getWebSocketSender();
 */
-            if(!ObjectUtils.isEmpty(webSocketSender)){
-                if(webSocketSender.hasAddressee(message.getMessage())){
-                    webSocketSender.get2uids(message.getMessage()).forEach(uid -> {
-                        if(!ObjectUtils.isEmpty(GlobalAttr.webSocketMap.get(uid))){
-                            webSocketSender.send2User(message.getUid(),message.getMessage());
-                        }
-                    });
-                }else {
-                    webSocketSender.sendAll(message.getUid(),message.getMessage());
+                if(!ObjectUtils.isEmpty(webSocketSender)){
+                    if(webSocketSender.hasAddressee(message.getMessage())){
+                        webSocketSender.get2uids(message.getMessage()).forEach(uid -> {
+                            if(!ObjectUtils.isEmpty(GlobalAttr.webSocketMap.get(uid))){
+                                try {
+                                    webSocketSender.send2User(message.getUid(),message.getMessage());
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    log.error(e.getMessage());
+                                }
+                            }
+                        });
+                    }else {
+                        webSocketSender.sendAll(message.getUid(),message.getMessage());
+                    }
                 }
+
             }
-
+        }catch (Exception e){
+            e.printStackTrace();
+            log.error(e.getMessage());
         }
-
     }
 }

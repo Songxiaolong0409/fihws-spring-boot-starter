@@ -1,11 +1,11 @@
 package com.fih.server;
 
+import com.fih.entity.SendMessageEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,7 +25,7 @@ public class WebSocketSender {
      *
      * @return
      */
-    public boolean hasAddressee(String message){
+    public boolean hasAddressee(String message) throws Exception {
         if(StringUtils.hasLength(message)&&message.contains(msgSplit)){
             return true;
         }
@@ -37,7 +37,7 @@ public class WebSocketSender {
      *
      * @return
      */
-    public List<String> get2uids(String message){
+    public List<String> get2uids(String message) throws Exception {
         if (!hasAddressee(message))
             return null;
 
@@ -58,19 +58,19 @@ public class WebSocketSender {
      *
      * @param message
      */
-    public void send2User(String uid,String message){
+    public void send2User(String uid,String message) throws Exception {
         List<String> touids=get2uids(message);
         if(touids.size()>pageSize){
-            List<WebSocketListenerHandle> list=new ArrayList<>();
+            /*List<WebSocketListenerHandle> list=new ArrayList<>();
             touids.forEach(touid -> {
                 WebSocketListenerHandle webSocketServer=GlobalAttr.webSocketMap.get(touid);
                 if(!ObjectUtils.isEmpty(webSocketServer))
                     list.add(webSocketServer);
 
-            });
-            sendAllThread(list,touids,uid,message);
+            });*/
+            sendAllThread(uid,touids,message);
         }else{
-            send2User(touids,message);
+            send2User(uid,touids,message);
         }
 
     }
@@ -81,14 +81,17 @@ public class WebSocketSender {
      * @param touids  接收用户组
      * @param message   信息
      */
-    public void send2User(List<String> touids,String message){
+    public void send2User(String uid,List<String> touids,String message) throws Exception {
         touids.forEach(touid -> {
-            WebSocketListenerHandle webSocketServer=GlobalAttr.webSocketMap.get(touid);
+            /*WebSocketListenerHandle webSocketServer=GlobalAttr.webSocketMap.get(touid);
             if(ObjectUtils.isEmpty(webSocketServer))
                 log.error("{}用户不在线，发送消息失败",touid);
             else{
-                sendMessage(webSocketServer,message);
-            }
+                sendMessage(webSocketServer,new SendMessageEntity(uid,touid,message));
+            }*/
+
+            sendMessage(GlobalAttr.webSocketMap.get(touid),
+                    new SendMessageEntity(uid,touid,message));
         });
     }
 
@@ -99,7 +102,7 @@ public class WebSocketSender {
      *
      * @param message
      */
-    public void sendAll(String uid,String message){
+    public void sendAll(String uid,String message) throws Exception {
         if (GlobalAttr.webSocketMap.size()>pageSize){
             sendAllThread(uid,message);
         }else
@@ -107,24 +110,21 @@ public class WebSocketSender {
 
     }
 
-    public void sendAllLoop(String uid,String message){
+    public void sendAllLoop(String uid,String message) throws Exception {
         GlobalAttr.webSocketMap.entrySet().stream().forEach(keset ->{
             String touid=keset.getKey();
             if(!uid.equals(touid)){//信息不发给自己
-                if(!hasOnline(touid))
-                    log.error("{}用户不在线，发送消息失败",touid);
-                else {
-                    sendMessage(GlobalAttr.webSocketMap.get(touid),message);
-                }
+                sendMessage(GlobalAttr.webSocketMap.get(touid),
+                        new SendMessageEntity(uid,touid,message));
             }
         });
     }
 
-    public void sendAllThread(String uid,String message){
+    public void sendAllThread(String uid,String message) throws Exception {
         //map转换为list，方便后续根据下标遍历取值
-        List<WebSocketListenerHandle> list=new ArrayList<>(GlobalAttr.webSocketMap.values());
+//        List<WebSocketListenerHandle> list=new ArrayList<>(GlobalAttr.webSocketMap.values());
         List<String> touids=new ArrayList<>(GlobalAttr.webSocketMap.keySet());
-        sendAllThread(list,touids,uid,message);
+        sendAllThread(uid,touids,message);
     }
 
     /**
@@ -135,29 +135,35 @@ public class WebSocketSender {
      * @param uid       发送人id
      * @param message   信息
      */
-    public void sendAllThread(List<WebSocketListenerHandle> list, List<String> touids, String uid, String message){
+    public void sendAllThread(String uid,List<String> touids, String message) throws Exception {
         //var totalPage = (total + pageSize - 1)/pageSize;
-        int totalPage=(list.size()+pageSize-1)/pageSize;
+        int totalPage=(touids.size()+pageSize-1)/pageSize;
 
         int current=1;
 
         ExecutorService cachedThreadPool = Executors.newCachedThreadPool();
 
         while (current<=totalPage){
-            current++;
             int currentMix=(current-1)*pageSize+1;
             int currentMax=current*pageSize;
+            if(currentMax>touids.size())
+                currentMax=touids.size();
+
+            int finalCurrentMax = currentMax;
 
             cachedThreadPool.execute(new Runnable() {
                 @Override
                 public void run() {
-                    for(int i=currentMix;i<currentMax;i++){
+                    for(int i = (currentMix-1); i< finalCurrentMax; i++){
+                        log.info("currentMix:{},currentMax:{},i:{}",currentMix, finalCurrentMax,i);
                         if(uid!=touids.get(i))//信息不发给自己
-                            sendMessage(list.get(i),message);
+                            sendMessage(GlobalAttr.webSocketMap.get(touids.get(i)),
+                                    new SendMessageEntity(uid,touids.get(i),message));
                     }
                 }
             });
 
+            ++current;
         }
     }
 
@@ -167,18 +173,27 @@ public class WebSocketSender {
      * @param uid
      * @return
      */
-    public boolean hasOnline(String uid){
+    public boolean hasOnline(String uid) throws Exception {
         return !ObjectUtils.isEmpty(GlobalAttr.userOnlineMap.get(uid));
     }
 
 
-    public void sendMessage(WebSocketListenerHandle webSocketServer, String message){
+    public synchronized void sendMessage(WebSocketListenerHandle webSocketServer,SendMessageEntity sme){
         try {
+            String message=sme.getMessage();
             if(hasAddressee(message))
                 message=message.split(msgSplit)[1];
 
-            webSocketServer.sendMessage(message);
-        } catch (IOException e) {
+            if(!hasOnline(sme.getGeterId()))
+                log.error("{}用户不在线，发送消息失败,离线消息",sme.getGeterId());
+            else if(ObjectUtils.isEmpty(webSocketServer.getSession()) || (!webSocketServer.getSession().isOpen())){
+                //若用户意外终端链接，并没有onClose()，手动onClose()，记录离线信息
+                log.error("{}用户意外断开链接，发送消息失败,离线消息",sme.getGeterId());
+                webSocketServer.onClose(sme.getGeterId());
+            }else {
+                webSocketServer.sendMessage(message);
+            }
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

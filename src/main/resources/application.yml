@@ -1,5 +1,9 @@
 server:
   port: 8084
+  tomcat:
+    max-threads: 1000
+    max-connections: 50000
+    accept-count: 4000
 
 spring:
   application:
@@ -26,7 +30,10 @@ spring:
         acknowledge-mode: auto
      #支持消息的确认与返回
     template:
-      mandatory: true
+      receive-timeout: 30000s #消费端接收的响应时间
+      reply-timeout: 30000s #发送端等待接收消费端给出return msg的时间 相当于在message同步时，发送并消费成功的时间。
+      retry:
+        enabled: true
 
 push.config.queue: queue_push1
 
